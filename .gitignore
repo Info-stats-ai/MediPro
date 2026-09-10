@@ -9,12 +9,14 @@ __pycache__/
 *.py[cod]
 node_modules/
 .next/
+.next-verify/
 out/
 coverage/
 .coverage
 htmlcov/
 dist/
 build/
+*.tsbuildinfo
 *.log
 uploads/
 .vercel/

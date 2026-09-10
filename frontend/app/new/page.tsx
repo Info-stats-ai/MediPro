@@ -32,8 +32,14 @@ export default function NewDocumentPage() {
     if ((mode === "text" && text.trim().length < 30) || (mode === "pdf" && !file)) return;
     setBusy(true); setError(""); setProgress(8); setStatus("Securing clinical content…");
     try {
-      let body: FormData | { text: string };
-      if (mode === "pdf") { body = new FormData(); body.append("file", file!); } else body = { text };
+      let body: FormData | { title: string; text: string };
+      if (mode === "pdf") {
+        body = new FormData();
+        body.append("file", file!);
+        body.append("title", file!.name.replace(/\.pdf$/i, ""));
+      } else {
+        body = { title: "Consultation note", text };
+      }
       let id = "mn-1042";
       if (process.env.NEXT_PUBLIC_API_URL) {
         const created = await api.createDocument(getToken, body);

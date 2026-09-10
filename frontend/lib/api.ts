@@ -32,6 +32,48 @@ export interface DocumentDetail extends ClinicalDocument {
   patientView: PatientNote;
 }
 
+interface ApiUrgentFlag {
+  label: string;
+  rationale: string;
+  severity: "low" | "medium" | "high" | "critical";
+}
+
+interface ApiClinicalSummary {
+  overview: string;
+  diagnoses: string[];
+  medications: string[];
+  plan: string[];
+  follow_up: string[];
+  urgent_flags: ApiUrgentFlag[];
+  disclaimer: string;
+}
+
+interface ApiPatientSummary {
+  overview: string;
+  what_to_do: string[];
+  medications: string[];
+  when_to_seek_help: string[];
+  questions_for_clinician: string[];
+  disclaimer: string;
+}
+
+interface ApiDocument {
+  id: string;
+  title: string;
+  patient_reference?: string | null;
+  source_type: "text" | "pdf";
+  summary_status: string;
+  clinical_summary?: ApiClinicalSummary | null;
+  patient_summary?: ApiPatientSummary | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ApiDocumentList {
+  items: ApiDocument[];
+  total: number;
+}
+
 export const MOCK_DOCUMENTS: ClinicalDocument[] = [
   { id: "mn-1042", title: "Follow-up — persistent cough", patient: "Elena R.", encounterDate: "Sep 9, 2026", updatedAt: "12 min ago", status: "needs_review", source: "paste" },
   { id: "mn-1039", title: "Annual wellness visit", patient: "Marcus T.", encounterDate: "Sep 8, 2026", updatedAt: "Yesterday", status: "ready", source: "pdf" },
@@ -75,25 +117,98 @@ async function request<T>(path: string, getToken: TokenGetter, init?: RequestIni
   return response.json() as Promise<T>;
 }
 
+const fallbackClinical: ClinicalNote = {
+  chiefComplaint: "",
+  hpi: "Summary generation is still in progress.",
+  assessment: [],
+  plan: [],
+  medications: [],
+  followUp: ""
+};
+const fallbackPatient: PatientNote = {
+  summary: "The patient explanation is still being generated.",
+  nextSteps: [],
+  medications: [],
+  urgentFlags: [],
+  teachBack: []
+};
+
+function toListItem(document: ApiDocument): ClinicalDocument {
+  const updated = new Date(document.updated_at);
+  return {
+    id: document.id,
+    title: document.title,
+    patient: document.patient_reference || "Patient not specified",
+    encounterDate: new Date(document.created_at).toLocaleDateString(),
+    updatedAt: updated.toLocaleString(),
+    status: document.summary_status === "complete" ? "ready" : document.summary_status === "failed" ? "needs_review" : "processing",
+    source: document.source_type === "pdf" ? "pdf" : "paste"
+  };
+}
+
+function toDetail(document: ApiDocument): DocumentDetail {
+  const base = toListItem(document);
+  const clinical = document.clinical_summary;
+  const patient = document.patient_summary;
+  return {
+    ...base,
+    clinical: clinical ? {
+      chiefComplaint: document.title,
+      hpi: clinical.overview,
+      assessment: clinical.diagnoses,
+      plan: clinical.plan,
+      medications: clinical.medications,
+      followUp: clinical.follow_up.join("\n")
+    } : fallbackClinical,
+    patientView: patient ? {
+      summary: patient.overview,
+      nextSteps: patient.what_to_do,
+      medications: patient.medications,
+      urgentFlags: patient.when_to_seek_help,
+      teachBack: patient.questions_for_clinician
+    } : fallbackPatient
+  };
+}
+
+function toApiClinical(note: ClinicalNote): ApiClinicalSummary {
+  return {
+    overview: `${note.chiefComplaint}\n\n${note.hpi}`,
+    diagnoses: note.assessment,
+    medications: note.medications,
+    plan: note.plan,
+    follow_up: note.followUp.split("\n").filter(Boolean),
+    urgent_flags: [],
+    disclaimer: "AI-generated draft for clinician review. It may contain errors or omissions and does not replace professional medical judgment, diagnosis, or emergency care."
+  };
+}
+
 export const api = {
-  listDocuments: (getToken: TokenGetter, query = "") =>
-    request<ClinicalDocument[]>(`/documents?q=${encodeURIComponent(query)}`, getToken),
-  getDocument: (getToken: TokenGetter, id: string) =>
-    request<DocumentDetail>(`/documents/${encodeURIComponent(id)}`, getToken),
-  createDocument: (getToken: TokenGetter, body: FormData | { text: string }) =>
-    request<{ id: string }>("/documents", getToken, {
+  async listDocuments(getToken: TokenGetter, query = "") {
+    const search = query.trim() ? `?search=${encodeURIComponent(query.trim())}` : "";
+    const result = await request<ApiDocumentList>(`/api/documents${search}`, getToken);
+    return result.items.map(toListItem);
+  },
+  async getDocument(getToken: TokenGetter, id: string) {
+    return toDetail(await request<ApiDocument>(`/api/documents/${encodeURIComponent(id)}`, getToken));
+  },
+  async createDocument(getToken: TokenGetter, body: FormData | { title: string; text: string }) {
+    const endpoint = body instanceof FormData ? "/api/documents/upload" : "/api/documents";
+    const created = await request<ApiDocument>(endpoint, getToken, {
       method: "POST",
       body: body instanceof FormData ? body : JSON.stringify(body)
-    }),
-  updateClinical: (getToken: TokenGetter, id: string, clinical: ClinicalNote) =>
-    request<DocumentDetail>(`/documents/${encodeURIComponent(id)}`, getToken, {
-      method: "PATCH", body: JSON.stringify({ clinical })
-    }),
-  regeneratePatient: (getToken: TokenGetter, id: string) =>
-    request<DocumentDetail>(`/documents/${encodeURIComponent(id)}/patient-view`, getToken, { method: "POST" }),
+    });
+    await request(`/api/documents/${encodeURIComponent(created.id)}/summarize`, getToken, { method: "POST" });
+    return { id: created.id };
+  },
+  async updateClinical(getToken: TokenGetter, id: string, clinical: ClinicalNote) {
+    const document = await request<ApiDocument>(`/api/documents/${encodeURIComponent(id)}`, getToken, {
+      method: "PATCH", body: JSON.stringify({ clinical_summary: toApiClinical(clinical) })
+    });
+    return toDetail(document);
+  },
   async streamProgress(getToken: TokenGetter, id: string, onProgress: (value: number, message: string) => void) {
     const token = await getToken();
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/documents/${encodeURIComponent(id)}/events`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/documents/${encodeURIComponent(id)}/stream`, {
       headers: { Accept: "text/event-stream", ...(token ? { Authorization: `Bearer ${token}` } : {}) }
     });
     if (!response.ok || !response.body) throw new Error("Unable to connect to processing stream");
@@ -109,8 +224,15 @@ export const api = {
       for (const chunk of chunks) {
         const line = chunk.split("\n").find((item) => item.startsWith("data:"));
         if (!line) continue;
-        const event = JSON.parse(line.slice(5)) as { progress: number; message: string };
-        onProgress(event.progress, event.message);
+        const event = JSON.parse(line.slice(5)) as { event?: string; status?: string };
+        const updates: Record<string, [number, string]> = {
+          clinical_processing: [35, "Structuring the clinician note…"],
+          clinical_ready: [70, "Clinical view ready…"],
+          patient_processing: [85, "Writing the patient explanation…"],
+          complete: [100, "Ready for clinician review"]
+        };
+        const update = updates[event.status ?? ""];
+        if (update) onProgress(...update);
       }
     }
   }

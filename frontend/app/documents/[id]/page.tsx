@@ -80,8 +80,9 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
     setWorking("Saving…");
     try {
       if (process.env.NEXT_PUBLIC_API_URL) {
-        const updated = await api.updateClinical(getToken, detail.id, note);
-        setDetail(updated);
+        await api.updateClinical(getToken, detail.id, note);
+        await api.streamProgress(getToken, detail.id, () => undefined);
+        setDetail(await api.getDocument(getToken, detail.id));
       } else setDetail({ ...detail, clinical: note });
       setEditing(false);
     } finally { setWorking(""); }
@@ -90,8 +91,11 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
   async function regenerate() {
     setWorking("Regenerating…");
     try {
-      if (process.env.NEXT_PUBLIC_API_URL) setDetail(await api.regeneratePatient(getToken, detail.id));
-      else await new Promise((resolve) => setTimeout(resolve, 700));
+      if (process.env.NEXT_PUBLIC_API_URL) {
+        await api.updateClinical(getToken, detail.id, note);
+        await api.streamProgress(getToken, detail.id, () => undefined);
+        setDetail(await api.getDocument(getToken, detail.id));
+      } else await new Promise((resolve) => setTimeout(resolve, 700));
       setView("patient");
     } finally { setWorking(""); }
   }
