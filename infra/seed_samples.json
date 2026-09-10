@@ -1,0 +1,59 @@
+[
+  {
+    "title": "Hypertension follow-up",
+    "raw_text": "54F here for BP follow-up. Home readings 148-156/88-94. No chest pain, dyspnea, headache, or vision change. Taking lisinopril 10 mg daily, misses about one dose weekly. Exam unremarkable. Increase lisinopril to 20 mg daily. BMP in 2 weeks. Continue home log and return in 4 weeks. ER precautions reviewed.",
+    "clinical": {
+      "chief_complaint": "Hypertension follow-up",
+      "hpi": "54-year-old woman with above-goal home blood pressure readings and occasional missed lisinopril doses. No symptoms suggesting acute end-organ injury.",
+      "assessment": ["Hypertension, uncontrolled", "Intermittent medication nonadherence"],
+      "plan": ["Increase lisinopril to 20 mg daily", "Record home blood pressure", "Review emergency precautions"],
+      "medications": [{"name": "Lisinopril", "dose": "20 mg", "frequency": "daily", "action": "increase"}],
+      "follow_up": ["BMP in 2 weeks", "Office visit in 4 weeks"]
+    },
+    "patient_facing": {
+      "what_we_found": "Your blood pressure is still higher than the goal. You do not have warning symptoms today.",
+      "why_it_matters": "Blood pressure that stays high can strain your heart, brain, and kidneys over time.",
+      "what_to_do_next": ["Take 20 mg of lisinopril every day", "Keep a daily blood pressure log", "Get the ordered blood test in 2 weeks", "Return in 4 weeks"],
+      "urgent_warning": "Get emergency help for chest pain, severe trouble breathing, sudden weakness, confusion, or a severe new headache.",
+      "teach_back": ["What dose of lisinopril will you take?", "When is your blood test?", "Which symptoms mean you should get emergency help?"]
+    }
+  },
+  {
+    "title": "Viral upper respiratory infection",
+    "raw_text": "29M, cough, congestion and sore throat x3 days. Tmax 100.2 at home. COVID test negative yesterday. Lungs clear, O2 98%, no respiratory distress. Likely viral URI. Fluids, rest, acetaminophen PRN. Return if fever >5 days, worsening, SOB, or dehydration.",
+    "clinical": {
+      "chief_complaint": "Cough, congestion, and sore throat",
+      "hpi": "29-year-old man with three days of mild upper respiratory symptoms, negative home COVID test, and no respiratory distress.",
+      "assessment": ["Likely viral upper respiratory infection"],
+      "plan": ["Supportive care with fluids and rest", "Acetaminophen as needed", "No antibiotics indicated"],
+      "medications": [{"name": "Acetaminophen", "dose": "per package directions", "frequency": "as needed", "action": "continue"}],
+      "follow_up": ["Return for persistent fever, worsening symptoms, breathing difficulty, or dehydration"]
+    },
+    "patient_facing": {
+      "what_we_found": "Your symptoms and exam fit a common viral infection. Your lungs sound clear and your oxygen level is normal.",
+      "why_it_matters": "Viruses usually improve on their own, and antibiotics do not treat them.",
+      "what_to_do_next": ["Drink fluids", "Rest", "Use acetaminophen as directed if needed"],
+      "urgent_warning": "Seek care quickly if breathing becomes hard, you cannot keep fluids down, symptoms rapidly worsen, or fever lasts more than 5 days.",
+      "teach_back": ["Why are antibiotics not recommended?", "What can you do at home?", "Which changes should prompt medical care?"]
+    }
+  },
+  {
+    "title": "New type 2 diabetes discussion",
+    "raw_text": "46F reviewing labs: A1c 7.8%, fasting glucose 168. Increased thirst, no vomiting or confusion. Discussed new T2DM diagnosis, diet/activity, eye and foot care. Start metformin ER 500 mg with dinner, increase to 1000 mg after 1 week if tolerated. Urine microalbumin ordered. Follow up 3 months.",
+    "clinical": {
+      "chief_complaint": "Abnormal glucose results",
+      "hpi": "46-year-old woman with increased thirst, A1c 7.8%, and fasting glucose 168 mg/dL. No symptoms of acute metabolic decompensation.",
+      "assessment": ["Newly diagnosed type 2 diabetes mellitus"],
+      "plan": ["Start metformin ER", "Nutrition and activity counseling", "Routine eye and foot care", "Check urine microalbumin"],
+      "medications": [{"name": "Metformin ER", "dose": "500 mg then 1000 mg if tolerated", "frequency": "with dinner", "action": "start"}],
+      "follow_up": ["Urine microalbumin", "Diabetes follow-up in 3 months"]
+    },
+    "patient_facing": {
+      "what_we_found": "Your blood sugar has been high enough to diagnose type 2 diabetes.",
+      "why_it_matters": "Managing blood sugar protects your eyes, kidneys, nerves, and heart.",
+      "what_to_do_next": ["Take metformin ER 500 mg with dinner", "After one week, increase to 1000 mg if your stomach tolerates it", "Complete the urine test", "Plan an eye exam and check your feet regularly", "Return in 3 months"],
+      "urgent_warning": "Get urgent help for repeated vomiting, severe weakness, confusion, or trouble staying awake.",
+      "teach_back": ["How will you increase metformin?", "Which routine checks help prevent complications?", "When is your follow-up?"]
+    }
+  }
+]
