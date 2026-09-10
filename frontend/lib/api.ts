@@ -77,9 +77,8 @@ interface ApiDocumentList {
 type TokenGetter = () => Promise<string | null>;
 
 function apiBaseUrl() {
-  const url = process.env.NEXT_PUBLIC_API_URL;
-  if (!url) throw new Error("The API is not configured for this deployment.");
-  return url.replace(/\/$/, "");
+  if (process.env.NODE_ENV !== "development") return "";
+  return (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 }
 
 async function request<T>(path: string, getToken: TokenGetter, init?: RequestInit): Promise<T> {
@@ -93,20 +92,23 @@ async function request<T>(path: string, getToken: TokenGetter, init?: RequestIni
     },
     cache: "no-store"
   });
-  if (!response.ok) throw new Error(`Request failed (${response.status})`);
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { detail?: string } | null;
+    throw new Error(payload?.detail || `Request failed (${response.status})`);
+  }
   return response.json() as Promise<T>;
 }
 
-const fallbackClinical: ClinicalNote = {
+const emptyClinical: ClinicalNote = {
   chiefComplaint: "",
-  hpi: "Summary generation is still in progress.",
+  hpi: "",
   assessment: [],
   plan: [],
   medications: [],
   followUp: ""
 };
-const fallbackPatient: PatientNote = {
-  summary: "The patient explanation is still being generated.",
+const emptyPatient: PatientNote = {
+  summary: "",
   nextSteps: [],
   medications: [],
   urgentFlags: [],
@@ -139,14 +141,14 @@ function toDetail(document: ApiDocument): DocumentDetail {
       plan: clinical.plan,
       medications: clinical.medications,
       followUp: clinical.follow_up.join("\n")
-    } : fallbackClinical,
+    } : emptyClinical,
     patientView: patient ? {
       summary: patient.overview,
       nextSteps: patient.what_to_do,
       medications: patient.medications,
       urgentFlags: patient.when_to_seek_help,
       teachBack: patient.questions_for_clinician
-    } : fallbackPatient
+    } : emptyPatient
   };
 }
 
@@ -177,8 +179,10 @@ export const api = {
       method: "POST",
       body: body instanceof FormData ? body : JSON.stringify(body)
     });
-    await request(`/api/documents/${encodeURIComponent(created.id)}/summarize`, getToken, { method: "POST" });
     return { id: created.id };
+  },
+  summarizeDocument(getToken: TokenGetter, id: string) {
+    return request(`/api/documents/${encodeURIComponent(id)}/summarize`, getToken, { method: "POST" });
   },
   async updateClinical(getToken: TokenGetter, id: string, clinical: ClinicalNote) {
     const document = await request<ApiDocument>(`/api/documents/${encodeURIComponent(id)}`, getToken, {

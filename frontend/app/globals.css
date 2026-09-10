@@ -2,21 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: light; }
+:root {
+  color-scheme: light;
+  --surface: #f6f8f7;
+  --ink: #162f2b;
+}
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { color: #243b37; background: #f7f9f8; }
-button, a, input, textarea { outline-color: #4f8b75; }
-button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+body {
+  min-width: 320px;
+  color: #243b37;
+  background:
+    radial-gradient(circle at 85% -10%, rgba(120, 181, 158, .12), transparent 30rem),
+    var(--surface);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, a, input, textarea { outline-color: #39725e; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
   outline: 3px solid rgba(79, 139, 117, .3);
   outline-offset: 2px;
 }
+::selection { background: #cde2d9; color: var(--ink); }
 
 @layer components {
   .card { @apply rounded-2xl border border-slate-200/80 bg-white shadow-soft; }
   .eyebrow { @apply text-[11px] font-bold uppercase tracking-[.18em] text-sage-600; }
-  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sage-700 disabled:cursor-not-allowed disabled:opacity-50; }
-  .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-sage-500 hover:text-sage-700; }
+  .btn-primary { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-sage-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-sm; }
+  .btn-secondary { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition duration-200 hover:border-sage-500 hover:text-sage-700 disabled:cursor-not-allowed disabled:opacity-50; }
+  .field { @apply w-full rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-ink shadow-inner shadow-slate-100 transition placeholder:text-slate-400 hover:border-slate-300 focus:border-sage-500 focus:bg-white; }
+  .status-badge { @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold capitalize; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }
 
 @media print {
@@ -28,4 +52,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .print-break-avoid { break-inside: avoid; }
   .patient-handout { font-size: 12pt; line-height: 1.6; }
   .patient-handout h2 { font-size: 18pt; }
+  .patient-handout input { display: none !important; }
+  a { color: inherit !important; text-decoration: none !important; }
 }

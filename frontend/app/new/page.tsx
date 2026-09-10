@@ -43,7 +43,11 @@ export default function NewDocumentPage() {
       }
       const created = await api.createDocument(getToken, body);
       const id = created.id;
-      await api.streamProgress(getToken, id, (value, message) => { setProgress(value); setStatus(message); });
+      const summary = api.summarizeDocument(getToken, id);
+      await Promise.all([
+        summary,
+        api.streamProgress(getToken, id, (value, message) => { setProgress(value); setStatus(message); })
+      ]);
       router.push(`/documents/${id}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Generation failed. Please try again.");

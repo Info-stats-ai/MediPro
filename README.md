@@ -14,13 +14,13 @@ The patient handout also includes a **Teach-Back Check**: short questions patien
 ```mermaid
 flowchart LR
     U[Clinician browser] -->|Clerk session| V[Next.js on Vercel]
-    V -->|Bearer JWT + SSE| A[FastAPI on Render/App Runner]
-    A -->|Verify JWT| C[Clerk JWKS]
+    V -->|Route Handlers + SSE| A[Next.js API]
+    A -->|Verify session| C[Clerk]
     A -->|Tenant-scoped queries| M[(MongoDB Atlas)]
     A -->|PDF originals| S[S3 / Cloudflare R2]
     A -->|Dual-output tool call| L[Claude Sonnet 4.6]
-    A -->|Digital text| P[PyMuPDF]
-    P -->|Scanned-page fallback| O[Tesseract OCR]
+    A -->|Digital PDF text| P[pdf-parse]
+    A -->|Optional scanned PDF| O[External OCR provider]
 ```
 
 Every database operation includes the authenticated Clerk `user_id`; API object IDs alone can never cross tenant boundaries. Files use hashed tenant prefixes and signed server-side access. No raw note text, extracted PDF text, output, filename, or token is written to application logs.
@@ -28,40 +28,40 @@ Every database operation includes the authenticated Clerk `user_id`; API object 
 ## Repository
 
 ```text
-frontend/   Next.js 14 App Router, TypeScript, Tailwind, Clerk
-backend/    FastAPI, MongoDB, Claude, PDF/OCR, S3/R2
-infra/      Render blueprint and demo seed data
+frontend/   Next.js 14 UI and API, MongoDB, Claude, Clerk, PDF ingestion
+backend/    Legacy FastAPI implementation retained for reference
+infra/      Infrastructure templates and demo seed data
 ```
 
 ## Local setup
 
-Requirements: Node 20+, Python 3.11+, Docker, and Tesseract (`brew install tesseract` on macOS).
+Requirements: Node 20+, Docker, Clerk, MongoDB, and Anthropic accounts.
 
 1. Copy environment templates:
 
    ```bash
-   cp backend/.env.example backend/.env
    cp frontend/.env.example frontend/.env.local
    ```
 
-2. Set `DEV_AUTH_BYPASS=true` only for local curl testing. It is rejected in staging and production.
+2. Add Clerk, MongoDB, and Anthropic credentials to `frontend/.env.local`.
 3. Start the full stack:
 
    ```bash
    docker compose up --build
    ```
 
-The web app is at `http://localhost:3000`, the API at `http://localhost:8000`, and OpenAPI docs at `http://localhost:8000/docs`.
+The web app and API are both served from `http://localhost:3000`.
 
 ### Backend-first curl check
 
 ```bash
-curl -sS -X POST http://localhost:8000/api/documents \
+curl -sS -X POST http://localhost:3000/api/documents \
+  -H 'Authorization: Bearer CLERK_SESSION_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '{"title":"Follow-up","text":"54F BP 152/92. Increase lisinopril to 20 mg. BMP in 2 weeks."}'
 
-curl -N -X POST http://localhost:8000/api/documents/DOCUMENT_ID/summarize
-curl -N http://localhost:8000/api/documents/DOCUMENT_ID/stream
+curl -N -X POST -H 'Authorization: Bearer CLERK_SESSION_TOKEN' http://localhost:3000/api/documents/DOCUMENT_ID/summarize
+curl -N -H 'Authorization: Bearer CLERK_SESSION_TOKEN' http://localhost:3000/api/documents/DOCUMENT_ID/stream
 ```
 
 With Clerk enabled, add `Authorization: Bearer <session-token>`.
@@ -82,13 +82,11 @@ With Clerk enabled, add `Authorization: Bearer <session-token>`.
 | `S3_BUCKET`, `S3_ENDPOINT_URL`, `S3_REGION` | AWS S3 or R2 destination |
 | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Object-store credentials |
 | `ADMIN_USER_IDS` | Comma-separated Clerk IDs allowed to view aggregate stats |
-| `DEV_AUTH_BYPASS` | Local-only authentication bypass |
 
 ### Frontend
 
 | Variable | Purpose |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | Public FastAPI origin |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key |
 | `CLERK_SECRET_KEY` | Clerk server key |
 
@@ -119,20 +117,14 @@ Demo examples are in `infra/seed_samples.json`.
 
 ## Deployment
 
-### Frontend — Vercel
+### Full stack — Vercel
 
-Import this GitHub repository, set the root directory to `frontend`, add the frontend environment variables, and deploy. Set `NEXT_PUBLIC_API_URL` to the HTTPS backend URL.
-
-### Backend — Render
-
-Create a Blueprint using `infra/render.yaml`, add the secret environment variables, and use a paid autoscaling-capable plan for production. Install Atlas network access, object storage, Clerk, and Anthropic credentials before enabling traffic.
+Import this GitHub repository, set the root directory to `frontend`, add all variables from `frontend/.env.example`, and deploy. The UI and authenticated API Route Handlers share one origin; `NEXT_PUBLIC_API_URL` is only an optional local development override.
 
 GitHub Actions runs backend tests, frontend lint/type/build, and a Docker build. After successful CI on `main`, deployment uses these repository secrets:
 
 - `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
-- `RENDER_DEPLOY_HOOK_URL`
-
-Vercel automatically scales the frontend. Render/App Runner scales the OCR-capable container independently; placing Tesseract inside Vercel Functions is intentionally avoided because binary size, execution time, and memory limits make scanned-document processing unreliable.
+Vercel scales the UI and Node.js Route Handlers. Native Tesseract is intentionally excluded from Vercel Functions; scanned PDFs use the optional `OCR_WEBHOOK_URL`.
 
 ## Data isolation
 

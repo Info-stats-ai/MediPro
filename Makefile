@@ -1,4 +1,4 @@
-.PHONY: dev test test-backend check-frontend build up down
+.PHONY: dev test check-frontend build up down
 
 dev:
 	docker compose up --build
@@ -9,10 +9,7 @@ up:
 down:
 	docker compose down
 
-test: test-backend check-frontend
-
-test-backend:
-	cd backend && pytest -q
+test: check-frontend
 
 check-frontend:
 	cd frontend && npm run lint && npm run typecheck
