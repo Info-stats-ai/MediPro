@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { color: #243b37; background: #f7f9f8; }
+button, a, input, textarea { outline-color: #4f8b75; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 3px solid rgba(79, 139, 117, .3);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .card { @apply rounded-2xl border border-slate-200/80 bg-white shadow-soft; }
+  .eyebrow { @apply text-[11px] font-bold uppercase tracking-[.18em] text-sage-600; }
+  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sage-700 disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-sage-500 hover:text-sage-700; }
+}
+
+@media print {
+  @page { margin: 0.65in; }
+  body { background: white !important; color: #172e2a; font-size: 11pt; }
+  aside, header, .no-print, button { display: none !important; }
+  main, .lg\:pl-64 { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+  .print-sheet { border: 0 !important; box-shadow: none !important; padding: 0 !important; }
+  .print-break-avoid { break-inside: avoid; }
+  .patient-handout { font-size: 12pt; line-height: 1.6; }
+  .patient-handout h2 { font-size: 18pt; }
+}
