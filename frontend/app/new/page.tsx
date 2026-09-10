@@ -11,6 +11,7 @@ export default function NewDocumentPage() {
   const getToken = useToken();
   const inputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<"text" | "pdf">("text");
+  const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
@@ -29,28 +30,20 @@ export default function NewDocumentPage() {
   }
 
   async function generate() {
-    if ((mode === "text" && text.trim().length < 30) || (mode === "pdf" && !file)) return;
+    if (!title.trim() || (mode === "text" && text.trim().length < 30) || (mode === "pdf" && !file)) return;
     setBusy(true); setError(""); setProgress(8); setStatus("Securing clinical content…");
     try {
       let body: FormData | { title: string; text: string };
       if (mode === "pdf") {
         body = new FormData();
         body.append("file", file!);
-        body.append("title", file!.name.replace(/\.pdf$/i, ""));
+        body.append("title", title.trim());
       } else {
-        body = { title: "Consultation note", text };
+        body = { title: title.trim(), text };
       }
-      let id = "mn-1042";
-      if (process.env.NEXT_PUBLIC_API_URL) {
-        const created = await api.createDocument(getToken, body);
-        id = created.id;
-        await api.streamProgress(getToken, id, (value, message) => { setProgress(value); setStatus(message); });
-      } else {
-        for (const [value, message] of [[32, "Extracting clinical details…"], [64, "Structuring the clinician note…"], [88, "Writing the patient explanation…"], [100, "Ready for clinician review"]] as const) {
-          await new Promise((resolve) => setTimeout(resolve, 420));
-          setProgress(value); setStatus(message);
-        }
-      }
+      const created = await api.createDocument(getToken, body);
+      const id = created.id;
+      await api.streamProgress(getToken, id, (value, message) => { setProgress(value); setStatus(message); });
       router.push(`/documents/${id}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Generation failed. Please try again.");
@@ -67,6 +60,7 @@ export default function NewDocumentPage() {
           <button onClick={() => setMode("pdf")} className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${mode === "pdf" ? "bg-sage-100 text-sage-700" : "text-slate-500 hover:bg-slate-50"}`}><UploadCloud className="size-4" />Upload PDF</button>
         </div>
         <div className="p-5 sm:p-7">
+          <label className="mb-5 block"><span className="mb-2 block text-sm font-semibold text-ink">Document title</span><input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} placeholder="e.g. Hypertension follow-up" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm placeholder:text-slate-400 focus:border-sage-500 focus:bg-white" /></label>
           {mode === "text" ? (
             <label className="block"><span className="mb-2 block text-sm font-semibold text-ink">Encounter note</span><textarea value={text} onChange={(event) => setText(event.target.value)} rows={14} placeholder="Paste the de-identified or authorized clinical note here…" className="w-full resize-y rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 placeholder:text-slate-400 focus:border-sage-500 focus:bg-white" /><span className="mt-2 block text-right text-xs text-slate-400">{text.length.toLocaleString()} characters</span></label>
           ) : (
@@ -77,7 +71,7 @@ export default function NewDocumentPage() {
           )}
           {error && <p role="alert" className="mt-4 flex items-center gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-700"><AlertCircle className="size-4" />{error}</p>}
           {busy && <div className="mt-5 rounded-2xl bg-sage-50 p-4" aria-live="polite"><div className="flex items-center justify-between text-xs font-semibold text-sage-700"><span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" />{status}</span><span>{progress}%</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-sage-600 transition-all duration-500" style={{ width: `${progress}%` }} /></div></div>}
-          <div className="mt-6 flex flex-col-reverse gap-4 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between"><p className="flex max-w-lg gap-2 text-xs leading-5 text-slate-500"><Check className="mt-0.5 size-4 shrink-0 text-sage-600" />AI output requires clinician review and approval. Do not rely on generated content for diagnosis or treatment decisions.</p><button onClick={generate} disabled={busy || (mode === "text" ? text.trim().length < 30 : !file)} className="btn-primary shrink-0 px-6 py-3"><Sparkles className="size-4" />Generate views</button></div>
+          <div className="mt-6 flex flex-col-reverse gap-4 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between"><p className="flex max-w-lg gap-2 text-xs leading-5 text-slate-500"><Check className="mt-0.5 size-4 shrink-0 text-sage-600" />AI output requires clinician review and approval. Do not rely on generated content for diagnosis or treatment decisions.</p><button onClick={generate} disabled={busy || !title.trim() || (mode === "text" ? text.trim().length < 30 : !file)} className="btn-primary shrink-0 px-6 py-3"><Sparkles className="size-4" />Generate views</button></div>
         </div>
       </section>
     </div>

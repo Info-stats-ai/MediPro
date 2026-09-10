@@ -52,7 +52,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="ml-auto flex items-center gap-3">
             {!hasClerk && <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">Preview mode</span>}
             {hasClerk && <><SignedOut><SignInButton><button className="text-sm font-semibold text-sage-700">Sign in</button></SignInButton></SignedOut><SignedIn><UserButton /></SignedIn></>}
-            {!hasClerk && <div className="grid size-9 place-items-center rounded-full bg-sage-100 text-xs font-bold text-sage-700">DR</div>}
           </div>
         </header>
         <main className="mx-auto max-w-[1400px] p-4 sm:p-6 md:p-8">{children}</main>

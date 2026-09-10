@@ -3,7 +3,7 @@
 import { AlertTriangle, ArrowLeft, Check, CheckCircle2, Clipboard, Download, Edit3, HeartHandshake, Loader2, Pill, RefreshCw, Save, Stethoscope, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { api, MOCK_DETAIL, type ClinicalNote, type DocumentDetail } from "@/lib/api";
+import { api, type ClinicalNote, type DocumentDetail } from "@/lib/api";
 import { useToken } from "@/components/providers";
 
 function Section({ title, icon: Icon, children, tone = "default" }: { title: string; icon: typeof Stethoscope; children: React.ReactNode; tone?: "default" | "warm" | "urgent" }) {
@@ -64,45 +64,57 @@ function toSoap(note: ClinicalNote) {
 
 export default function DocumentPage({ params }: { params: { id: string } }) {
   const getToken = useToken();
-  const [detail, setDetail] = useState<DocumentDetail>(MOCK_DETAIL);
-  const [note, setNote] = useState<ClinicalNote>(MOCK_DETAIL.clinical);
+  const [detail, setDetail] = useState<DocumentDetail | null>(null);
+  const [note, setNote] = useState<ClinicalNote | null>(null);
+  const [loadError, setLoadError] = useState("");
   const [view, setView] = useState<"clinician" | "patient">("clinician");
   const [editing, setEditing] = useState(false);
   const [working, setWorking] = useState("");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_API_URL) return;
-    api.getDocument(getToken, params.id).then((data) => { setDetail(data); setNote(data.clinical); }).catch(() => undefined);
+    api.getDocument(getToken, params.id)
+      .then((data) => { setDetail(data); setNote(data.clinical); })
+      .catch((error: Error) => setLoadError(error.message));
   }, [getToken, params.id]);
 
   async function save() {
+    if (!detail || !note) return;
     setWorking("Saving…");
     try {
-      if (process.env.NEXT_PUBLIC_API_URL) {
-        await api.updateClinical(getToken, detail.id, note);
-        await api.streamProgress(getToken, detail.id, () => undefined);
-        setDetail(await api.getDocument(getToken, detail.id));
-      } else setDetail({ ...detail, clinical: note });
+      await api.updateClinical(getToken, detail.id, note);
+      await api.streamProgress(getToken, detail.id, () => undefined);
+      setDetail(await api.getDocument(getToken, detail.id));
       setEditing(false);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Unable to save the document.");
     } finally { setWorking(""); }
   }
 
   async function regenerate() {
+    if (!detail || !note) return;
     setWorking("Regenerating…");
     try {
-      if (process.env.NEXT_PUBLIC_API_URL) {
-        await api.updateClinical(getToken, detail.id, note);
-        await api.streamProgress(getToken, detail.id, () => undefined);
-        setDetail(await api.getDocument(getToken, detail.id));
-      } else await new Promise((resolve) => setTimeout(resolve, 700));
+      await api.updateClinical(getToken, detail.id, note);
+      await api.streamProgress(getToken, detail.id, () => undefined);
+      setDetail(await api.getDocument(getToken, detail.id));
       setView("patient");
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Unable to regenerate the patient view.");
     } finally { setWorking(""); }
   }
 
   async function copySoap() {
+    if (!note) return;
     await navigator.clipboard.writeText(toSoap(note));
     setCopied(true); setTimeout(() => setCopied(false), 1600);
+  }
+
+  if (loadError) {
+    return <div className="card mx-auto max-w-xl p-8 text-center"><AlertTriangle className="mx-auto size-8 text-red-600" /><h1 className="mt-4 text-xl font-bold text-ink">Document unavailable</h1><p className="mt-2 text-sm text-slate-600">{loadError}</p><Link href="/" className="btn-secondary mt-6">Back to dashboard</Link></div>;
+  }
+  if (!detail || !note) {
+    return <div className="grid min-h-[50vh] place-items-center" aria-live="polite"><div className="text-center"><Loader2 className="mx-auto size-7 animate-spin text-sage-600" /><p className="mt-3 text-sm text-slate-500">Loading document…</p></div></div>;
   }
 
   return (
@@ -110,7 +122,7 @@ export default function DocumentPage({ params }: { params: { id: string } }) {
       <div className="no-print flex flex-col gap-4">
         <Link href="/" className="flex w-fit items-center gap-2 text-xs font-semibold text-slate-500 hover:text-sage-700"><ArrowLeft className="size-4" />Back to dashboard</Link>
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div><div className="flex flex-wrap items-center gap-2"><span className="eyebrow">{detail.patient} · {detail.encounterDate}</span><span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700">Needs review</span></div><h1 className="mt-2 text-2xl font-bold tracking-tight text-ink md:text-3xl">{detail.title}</h1></div>
+          <div><div className="flex flex-wrap items-center gap-2"><span className="eyebrow">{detail.patient} · {detail.encounterDate}</span><span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700">{detail.status.replace("_", " ")}</span></div><h1 className="mt-2 text-2xl font-bold tracking-tight text-ink md:text-3xl">{detail.title}</h1></div>
           <div className="flex flex-wrap gap-2">
             <button onClick={copySoap} className="btn-secondary">{copied ? <Check className="size-4 text-sage-600" /> : <Clipboard className="size-4" />}{copied ? "Copied" : "Copy EHR / SOAP"}</button>
             <button onClick={() => window.print()} className="btn-secondary"><Download className="size-4" />Export PDF / Print</button>

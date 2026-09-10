@@ -3,7 +3,7 @@
 import { Calendar, ChevronRight, FileText, Search, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { api, MOCK_DOCUMENTS, type ClinicalDocument } from "@/lib/api";
+import { api, type ClinicalDocument } from "@/lib/api";
 import { useToken } from "./providers";
 
 const statusStyle = {
@@ -15,14 +15,18 @@ const statusStyle = {
 export function DocumentList({ limit }: { limit?: number }) {
   const getToken = useToken();
   const [query, setQuery] = useState("");
-  const [documents, setDocuments] = useState<ClinicalDocument[]>(MOCK_DOCUMENTS);
-  const [loading, setLoading] = useState(Boolean(process.env.NEXT_PUBLIC_API_URL));
+  const [documents, setDocuments] = useState<ClinicalDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_API_URL) return;
     const timer = setTimeout(() => {
       setLoading(true);
-      api.listDocuments(getToken, query).then(setDocuments).catch(() => setDocuments(MOCK_DOCUMENTS)).finally(() => setLoading(false));
+      setError("");
+      api.listDocuments(getToken, query)
+        .then(setDocuments)
+        .catch((cause: Error) => setError(cause.message))
+        .finally(() => setLoading(false));
     }, 250);
     return () => clearTimeout(timer);
   }, [getToken, query]);
@@ -44,7 +48,9 @@ export function DocumentList({ limit }: { limit?: number }) {
       </div>
       <div aria-live="polite">
         {loading && <div className="h-1 animate-pulse bg-sage-500" />}
-        {!loading && visible.length === 0 ? (
+        {!loading && error ? (
+          <div className="grid min-h-48 place-items-center p-8 text-center"><div><h3 className="font-semibold text-ink">Unable to load documents</h3><p className="mt-2 text-sm text-red-700">{error}</p></div></div>
+        ) : !loading && visible.length === 0 ? (
           <div className="grid min-h-64 place-items-center p-8 text-center"><div><div className="mx-auto mb-4 grid size-12 place-items-center rounded-2xl bg-sage-50"><FileText className="size-6 text-sage-600" /></div><h3 className="font-semibold text-ink">No documents found</h3><p className="mt-1 text-sm text-slate-500">Try another search or create your first clinical note.</p><Link className="btn-primary mt-5" href="/new"><Sparkles className="size-4" />Create document</Link></div></div>
         ) : (
           <ul className="divide-y divide-slate-100">

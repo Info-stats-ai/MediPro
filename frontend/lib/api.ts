@@ -74,37 +74,17 @@ interface ApiDocumentList {
   total: number;
 }
 
-export const MOCK_DOCUMENTS: ClinicalDocument[] = [
-  { id: "mn-1042", title: "Follow-up — persistent cough", patient: "Elena R.", encounterDate: "Sep 9, 2026", updatedAt: "12 min ago", status: "needs_review", source: "paste" },
-  { id: "mn-1039", title: "Annual wellness visit", patient: "Marcus T.", encounterDate: "Sep 8, 2026", updatedAt: "Yesterday", status: "ready", source: "pdf" },
-  { id: "mn-1035", title: "New onset lower back pain", patient: "Jordan K.", encounterDate: "Sep 6, 2026", updatedAt: "Sep 6", status: "ready", source: "paste" },
-  { id: "mn-1031", title: "Diabetes medication review", patient: "Priya S.", encounterDate: "Sep 4, 2026", updatedAt: "Sep 4", status: "ready", source: "pdf" }
-];
-
-export const MOCK_DETAIL: DocumentDetail = {
-  ...MOCK_DOCUMENTS[0],
-  clinical: {
-    chiefComplaint: "Persistent dry cough for approximately three weeks.",
-    hpi: "42-year-old patient reports a nonproductive cough beginning after a viral upper respiratory illness. Symptoms are worse at night and with cold air. No fever, hemoptysis, dyspnea at rest, or known sick contacts. OTC dextromethorphan provides limited relief.",
-    assessment: ["Post-viral cough, most likely", "Consider cough-variant asthma if symptoms persist", "No current evidence of bacterial pneumonia"],
-    plan: ["Trial albuterol inhaler: 2 puffs every 4–6 hours as needed", "Hydration, humidified air, and honey at bedtime", "Chest radiograph if no improvement within 2 weeks"],
-    medications: ["Albuterol HFA 90 mcg — 2 puffs PRN cough/wheeze", "Continue cetirizine 10 mg daily"],
-    followUp: "Follow up in 2 weeks or sooner for worsening symptoms."
-  },
-  patientView: {
-    summary: "Your cough most likely started with your recent cold and is taking longer than usual to settle down. Your lungs do not show signs of pneumonia today. Cold air and nighttime can make this kind of cough worse.",
-    nextSteps: ["Use the new inhaler when your cough or wheezing is bothersome.", "Drink plenty of fluids. A humidifier or a spoonful of honey before bed may help.", "If you are not improving in 2 weeks, contact the clinic. We may order a chest X-ray."],
-    medications: ["Albuterol inhaler: Take 2 puffs every 4–6 hours when needed. Ask the pharmacist to show you how to use it.", "Keep taking cetirizine 10 mg once each day."],
-    urgentFlags: ["Get urgent help now for severe trouble breathing, blue lips, chest pain, fainting, or coughing up blood."],
-    teachBack: ["What do you think is causing your cough?", "Show or explain how you will use your inhaler.", "When should you contact the clinic, and what symptoms mean you need urgent help?"]
-  }
-};
-
 type TokenGetter = () => Promise<string | null>;
+
+function apiBaseUrl() {
+  const url = process.env.NEXT_PUBLIC_API_URL;
+  if (!url) throw new Error("The API is not configured for this deployment.");
+  return url.replace(/\/$/, "");
+}
 
 async function request<T>(path: string, getToken: TokenGetter, init?: RequestInit): Promise<T> {
   const token = await getToken();
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}${path}`, {
+  const response = await fetch(`${apiBaseUrl()}${path}`, {
     ...init,
     headers: {
       ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
@@ -208,7 +188,7 @@ export const api = {
   },
   async streamProgress(getToken: TokenGetter, id: string, onProgress: (value: number, message: string) => void) {
     const token = await getToken();
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/documents/${encodeURIComponent(id)}/stream`, {
+    const response = await fetch(`${apiBaseUrl()}/api/documents/${encodeURIComponent(id)}/stream`, {
       headers: { Accept: "text/event-stream", ...(token ? { Authorization: `Bearer ${token}` } : {}) }
     });
     if (!response.ok || !response.body) throw new Error("Unable to connect to processing stream");
