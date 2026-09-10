@@ -1,5 +1,7 @@
 # MediNotes Pro
 
+[**Live Demo →**](https://frontend-seven-orpin-43.vercel.app)
+
 AI-assisted clinical documentation that converts pasted consultation notes or medical PDFs into two linked outputs:
 
 - a structured, editable clinician summary
@@ -8,6 +10,8 @@ AI-assisted clinical documentation that converts pasted consultation notes or me
 The patient handout also includes a **Teach-Back Check**: short questions patients can use to confirm they understood medications, follow-up, and urgent warning signs.
 
 > **Clinical safety:** All generated content must be reviewed by a licensed clinician before clinical use. Patient explanations are generated from clinician notes and are not a substitute for direct medical advice.
+
+> **Production configuration:** Authenticated AI workflows require production Clerk, MongoDB, and Anthropic credentials to be configured in the deployment.
 
 ## Architecture
 
